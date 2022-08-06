@@ -38,11 +38,24 @@ app.post('/', async (req, res) => {
         }
         const action = client[req.body.action + 'Async']
         const [actionRes] = await action(req.body.args)
+        if(req.body.logging) {
+            res.set({
+                'X-Log-Request': client.lastRequest,
+                'X-Log-Response': client.lastResponse
+            })
+        }
         res.send(actionRes)
     } catch(err) {
         if(err.response && err.response.status) {
             const xml = (new XMLParser()).parse(err.body)
-            res.status(err.response.status).send({
+            res.status(err.response.status)
+            if(req.body.logging) {
+                res.set({
+                    'X-Log-Request': client.lastRequest,
+                    'X-Log-Response': client.lastResponse
+                })
+            }
+            res.send({
                 error: findKeyRecursive(xml, 'faultstring') || xml
             })
         } else {
