@@ -24,6 +24,12 @@ function findKeyRecursive(obj, key) {
     return null
 }
 
+function filterPassword(req, password) {
+    if(!password)
+        return req
+    return req.replace(password, '***')
+}
+
 app.post('/', async (req, res) => {
     if(process.env.API_KEY && process.env.API_KEY != req.token) {
         res.status(401).send({
@@ -40,7 +46,7 @@ app.post('/', async (req, res) => {
         const [actionRes] = await action(req.body.args)
         if(req.body.logging) {
             res.set({
-                'X-Log-Request': client.lastRequest,
+                'X-Log-Request': filterPassword(client.lastRequest, req.body.password),
                 'X-Log-Response': client.lastResponse
             })
         }
@@ -48,11 +54,11 @@ app.post('/', async (req, res) => {
     } catch(err) {
         if(err.response && err.response.status) {
             const xml = (new XMLParser()).parse(err.body)
-            res.status(err.response.status)
+            res.status(err.response.status != 200 ? err.response.status : 500)
             if(req.body.logging) {
                 res.set({
-                    'X-Log-Request': client.lastRequest,
-                    'X-Log-Response': client.lastResponse
+                    'X-Log-Request': filterPassword(err.response.config.data, req.body.password),
+                    'X-Log-Response': err.body
                 })
             }
             res.send({
